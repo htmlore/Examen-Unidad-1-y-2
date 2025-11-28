@@ -63,12 +63,62 @@ def CargarDatos():
    requiere que retorne la información de todas las marcas. NOTA: Los cálculos debe hacerlos con PANDAS no con la 
    consulta SQL, la consulta solo puede usar select, from.
 '''
+def CalcularVentas(marca=None):
+    cadena_conexion = (f"mysql+mysqlconnector://"
+                       f"{conectar.USER.value}:"
+                       f"{conectar.PASSWORD.value}@"
+                       f"{conectar.SERVER.value}/"
+                       f"{conectar.NAME_BD.value}")
 
+    try:
+        engine = create_engine(cadena_conexion)
+        conexion = engine.connect()
+        #print("Conexión exitosa! ◝(ᵔᗜᵔ)◜")
 
+        #COnsulta para obtener el precio de coche
+        query = "SELECT Marca, Precio FROM ventas"
+
+        #Leemos los datos de la tablas
+        df = pd.read_sql(query, con=conexion)
+
+        df['Precio'] = pd.to_numeric(df['Precio'], errors='coerce')
+
+        #Creamos los parametros, filtramos los coches por marcas
+        if marca is not None:
+            df = df[df['Marca'] == marca]
+
+            if df.empty:
+                print(f"No se encontraron registros para la marca: {marca} ∘ ∘ ∘ ( °ヮ° ) ?")
+                conexion.close()
+                return None
+
+        resultado = df.groupby('Marca').agg(
+            Numero_Autos=('Marca', 'count'),
+            Total_Ganancia=('Precio', 'sum')
+        ).reset_index()
+
+        resultado = resultado.sort_values(by='Numero_Autos', ascending=False)
+
+        resultado['Total_Ganancia'] = resultado['Total_Ganancia']
+
+        conexion.close()
+        #print("Conexión cerrada (ㅅ´ ˘ `)")
+
+        return resultado
+
+    except Exception as e:
+        print(f"Error: {e} ՞߹ - ߹՞")
+        return None
 
 
 
 
 if __name__ == '__main__':
-    #CargarDatos()
-    print(". ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁.. ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁.. ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁.. ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁.. ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁.")
+    CargarDatos()
+    print("⏔⏔⏔ ꒰ ᧔ෆ᧓ ꒱ ⏔⏔⏔ VENTAS TOYOTA ⏔⏔⏔ ꒰ ᧔ෆ᧓ ꒱ ⏔⏔⏔")
+    df_toyota = CalcularVentas(marca="Toyota")
+    print(df_toyota.to_string(index=False))
+
+    print("⏔⏔⏔ ꒰ ᧔ෆ᧓ ꒱ ⏔⏔⏔ VENTAS TODAS ⏔⏔⏔ ꒰ ᧔ෆ᧓ ꒱ ⏔⏔⏔")
+    df_todas = CalcularVentas()
+    print(df_todas.to_string(index=False))
